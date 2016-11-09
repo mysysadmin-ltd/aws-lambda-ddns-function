@@ -51,6 +51,7 @@ def lambda_handler(event, context):
     table = dynamodb_resource.Table('DDNS')
 
     if state == 'running':
+        time.sleep(60)
         instance = compute.describe_instances(InstanceIds=[instance_id])
         # Remove response metadata from the response
         instance.pop('ResponseMetadata')
@@ -190,12 +191,14 @@ def lambda_handler(event, context):
                     # create A record in public zone
                     if state =='running':
                         try:
-                            create_resource_record(public_hosted_zone_id, public_host_name, public_hosted_zone_name, 'A', public_ip)
+#                            create_resource_record(public_hosted_zone_id, public_host_name, public_hosted_zone_name, 'A', public_ip)
+                            create_resource_record(public_hosted_zone_id, private_host_name, public_hosted_zone_name, 'A', private_ip)
                         except BaseException as e:
                             print e
                     else:
                         try:
-                            delete_resource_record(public_hosted_zone_id, public_host_name, public_hosted_zone_name, 'A', public_ip)
+#                            delete_resource_record(public_hosted_zone_id, public_host_name, public_hosted_zone_name, 'A', public_ip)
+                            delete_resource_record(public_hosted_zone_id, private_host_name, public_hosted_zone_name, 'A', private_ip)
                         except BaseException as e:
                             print e
                 #else:
@@ -205,7 +208,7 @@ def lambda_handler(event, context):
         # Consider making this an elif CNAME
         else:
             print 'The tag \'%s\' is not a zone tag' % tag.get('Key')
-        if 'CNAME'in tag.get('Key',{}).lstrip().upper():
+        if 'CNAME' in tag.get('Key',{}).lstrip().upper():
             if is_valid_hostname(tag.get('Value')):
                 cname = tag.get('Value').lstrip().lower()
                 cname_host_name = cname.split('.')[0]
@@ -217,13 +220,14 @@ def lambda_handler(event, context):
                         if cname.endswith(cname_private_hosted_zone):
                             #create CNAME record in private zone
                             if state == 'running':
+                                a_record_name = private_host_name + '.' + cname_private_hosted_zone
                                 try:
-                                    create_resource_record(cname_private_hosted_zone_id, cname_host_name, cname_private_hosted_zone, 'CNAME', private_dns_name)
+                                    create_resource_record(cname_private_hosted_zone_id, cname_host_name, cname_private_hosted_zone, 'CNAME', a_record_name)
                                 except BaseException as e:
                                     print e
                             else:
                                 try:
-                                    delete_resource_record(cname_private_hosted_zone_id, cname_host_name, cname_private_hosted_zone, 'CNAME', private_dns_name)
+                                    delete_resource_record(cname_private_hosted_zone_id, cname_host_name, cname_private_hosted_zone, 'CNAME', a_record_name)
                                 except BaseException as e:
                                     print e
                 for cname_public_hosted_zone in public_hosted_zones_collection:
@@ -231,13 +235,16 @@ def lambda_handler(event, context):
                         cname_public_hosted_zone_id = get_zone_id(cname_public_hosted_zone, 'Public')
                         #create CNAME record in public zone
                         if state == 'running':
+                            a_record_name = private_host_name + '.' + cname_public_hosted_zone
                             try:
-                                create_resource_record(cname_public_hosted_zone_id, cname_host_name, cname_public_hosted_zone, 'CNAME', public_dns_name)
+#                                create_resource_record(cname_public_hosted_zone_id, cname_host_name, cname_public_hosted_zone, 'CNAME', public_dns_name)
+                                create_resource_record(cname_public_hosted_zone_id, cname_host_name, cname_public_hosted_zone, 'CNAME', a_record_name)
                             except BaseException as e:
                                 print e
                         else:
                             try:
-                                delete_resource_record(cname_public_hosted_zone_id, cname_host_name, cname_public_hosted_zone, 'CNAME', public_dns_name)
+#                                delete_resource_record(cname_public_hosted_zone_id, cname_host_name, cname_public_hosted_zone, 'CNAME', public_dns_name)
+                                delete_resource_record(cname_public_hosted_zone_id, cname_host_name, cname_public_hosted_zone, 'CNAME', a_record_name)
                             except BaseException as e:
                                 print e
     # Is there a DHCP option set?
